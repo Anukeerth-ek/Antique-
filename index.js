@@ -8,6 +8,11 @@ const port = process.env.PORT
 app.use(cors());
 app.use(express.json());
 
+app.get('/', (req, res)=> {
+  res.send("Hello World")
+})
+
+
 // MongoDB Configuration
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = process.env.MONGO_URL;
