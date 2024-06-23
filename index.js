@@ -59,12 +59,21 @@ async function run() {
     });
 
     // Getting a single item 
-    app.get('/art/:id', async(req, res)=> {
-      const id = req.params.id;
-      const filter = {_id: new ObjectId(id)}
-      const result = await artWorks.findOne(filter)
-      res.send(result)
-    })
+    app.get('/art/:id', async (req, res) => {
+      try {
+        const id = req.params.id; // Extract the id parameter from the URL
+        const filter = { _id: new ObjectId(id) }; // Convert id to ObjectId
+        const artwork = await artWorks.findOne(filter); // Query MongoDB with the filter
+        if (artwork) {
+          res.json(artwork); // Send the artwork as JSON response
+        } else {
+          res.status(404).json({ error: "Artwork not found" });
+        }
+      } catch (error) {
+        console.error("Error fetching artwork:", error);
+        res.status(500).json({ error: "Failed to fetch artwork" });
+      }
+    });
 
     // Update an artwork
     app.patch("/art/:id", async (req, res) => {
@@ -100,31 +109,28 @@ async function run() {
     });
 
 
-   // Filter artworks by category
-app.get('/all-arts', async (req, res) => {
+// Get artworks by category
+
+app.get('/all-arts/:category', async (req, res) => {
   try {
-    let query = {};
+    const db = client.db("ArtWorks"); // Replace with your database name
+    const artWorks = db.collection("arts"); // Replace with your collection name
 
-    // Check if categories query parameter exists and is not empty
-    if (req.query.categories && req.query.categories.trim() !== '') {
-      const categories = req.query.categories.toLowerCase(); // Convert to lowercase
+    const category = req.params.category; // Remove .toLowerCase()
+  
+    const artworks = await artWorks.find({ categories: category }).toArray();
 
-      // Construct query to match the exact category
-      query = {
-        categories: categories
-      };
-
-      console.log('Query:', JSON.stringify(query));  // Debugging output
+    if (!artworks || artworks.length === 0) {
+      return res.status(404).json({ error: `No artworks found in category: ${category}` });
     }
 
-    const result = await artWorks.find(query).toArray();
-    console.log('Result count:', result.length);  // Debugging output
-    res.json(result);
+    res.json(artworks);
   } catch (error) {
-    console.error("Error fetching or filtering artworks:", error);
-    res.status(500).json({ error: "Failed to fetch or filter artworks" });
+    console.error('Error fetching artworks by category:', error);
+    res.status(500).json({ error: 'Failed to fetch artworks' });
   }
 });
+
 
 
 
