@@ -9,7 +9,7 @@ app.use(cors());
 app.use(express.json());
 
 // stripe
-const stripe = require("stripe")(process.env.VITE_SECRET);
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 app.get("/", (req, res) => {
      res.send("Hello World");
@@ -133,27 +133,35 @@ async function run() {
           });
 
           app.post("/create-checkout-session", async (req, res) => {
-               const { products } = req.body;
-
-               const lineItems = products.map((product) => ({
+            try {
+                const { products } = req.body;
+        
+                const lineItems = products.map((product) => ({
                     price_data: {
-                         currency: "usd",
-                         product_data: {
-                              name: product.title,
-                              image: [product.image],
-                         },
-                         unit_amount: Math.round(product.price * 100),
+                        currency: "usd",
+                        product_data: {
+                            name: product.title,
+                            images: [product.image], // Use 'images' instead of 'image'
+                        },
+                        unit_amount: Math.round(product.price * 100),
                     },
-               }));
-
-               const session = await stripe.checkout.session.create({
-                payment_method_types:["card"],
-                line_items:lineItems,
-                mode:"payment",
-               })
-
-               res.json({id:session.id})
-          });
+                    quantity: product.quantity || 1 // Ensure you handle quantity if needed
+                }));
+        
+                const session = await stripe.checkout.sessions.create({
+                    payment_method_types: ["card"],
+                    line_items: lineItems,
+                    mode: "payment",
+                    success_url: `${process.env.YOUR_SUCCESS_URL}`,
+                    cancel_url: `${process.env.YOUR_CANCEL_URL}`,
+                });
+        
+                res.json({ id: session.id });
+            } catch (error) {
+                console.error('Error creating checkout session:', error);
+                res.status(500).json({ error: 'Internal Server Error' });
+            }
+        });
 
           // Send a ping to confirm a successful connection
           await client.db("admin").command({ ping: 1 });
