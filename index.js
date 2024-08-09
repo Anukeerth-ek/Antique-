@@ -9,7 +9,7 @@ app.use(cors());
 app.use(express.json());
 
 // stripe
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const stripe = require("stripe")('sk_test_51OUmsmSEK2ICB9oRGqj4zhhrt1sLjzIGwqatSu0XJrUxNWg44isBWWUbOvcN3ZTXXz7VziAaDvoCMMVYIaORVP4q00ggq7G05K');
 
 app.get("/", (req, res) => {
      res.send("Hello World");
@@ -132,36 +132,39 @@ async function run() {
                }
           });
 
-          app.post("/create-checkout-session", async (req, res) => {
-            try {
-                const { products } = req.body;
-        
-                const lineItems = products.map((product) => ({
-                    price_data: {
-                        currency: "usd",
-                        product_data: {
-                            name: product.title,
-                            images: [product.image], // Use 'images' instead of 'image'
-                        },
-                        unit_amount: Math.round(product.price * 100),
-                    },
-                    quantity: product.quantity || 1 // Ensure you handle quantity if needed
-                }));
-        
-                const session = await stripe.checkout.sessions.create({
-                    payment_method_types: ["card"],
-                    line_items: lineItems,
-                    mode: "payment",
-                    success_url: `${process.env.YOUR_SUCCESS_URL}`,
-                    cancel_url: `${process.env.YOUR_CANCEL_URL}`,
-                });
-        
-                res.json({ id: session.id });
-            } catch (error) {
-                console.error('Error creating checkout session:', error);
-                res.status(500).json({ error: 'Internal Server Error' });
-            }
-        });
+          app.post('/create-checkout-session', async (req, res) => {
+               try {
+                   const { products } = req.body;
+           
+                   if (!products || products.length === 0) {
+                       return res.status(400).json({ error: 'No products provided' });
+                   }
+           
+                   const lineItems = products.map(product => ({
+                       price_data: {
+                           currency: 'usd',
+                           product_data: {
+                               name: product.name, // Assuming your product has a name field
+                           },
+                           unit_amount: product.price * 100, // Stripe expects the amount in cents
+                       },
+                       quantity: product.quantity, // Assuming your product has a quantity field
+                   }));
+           
+                   const session = await stripe.checkout.sessions.create({
+                       payment_method_types: ['card'],
+                       line_items: lineItems,
+                       mode: 'payment',
+                       success_url: 'https://your-domain.com/success', // Replace with your success URL
+                       cancel_url: 'https://your-domain.com/cancel', // Replace with your cancel URL
+                   });
+           
+                   res.json({ id: session.id });
+               } catch (error) {
+                   console.error('Error creating checkout session:', error);
+                   res.status(500).json({ error: 'Internal Server Error' });
+               }
+           });
 
           // Send a ping to confirm a successful connection
           await client.db("admin").command({ ping: 1 });
